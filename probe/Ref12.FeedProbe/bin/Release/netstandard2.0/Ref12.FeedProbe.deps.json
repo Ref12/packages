@@ -1,0 +1,24 @@
+{
+  "runtimeTarget": {
+    "name": ".NETStandard,Version=v2.0/",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETStandard,Version=v2.0": {},
+    ".NETStandard,Version=v2.0/": {
+      "Ref12.FeedProbe/0.0.2": {
+        "runtime": {
+          "Ref12.FeedProbe.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Ref12.FeedProbe/0.0.2": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

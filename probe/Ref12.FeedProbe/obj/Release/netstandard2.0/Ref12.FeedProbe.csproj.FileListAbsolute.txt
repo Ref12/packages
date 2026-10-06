@@ -1,0 +1,11 @@
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\bin\Release\netstandard2.0\Ref12.FeedProbe.deps.json
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\bin\Release\netstandard2.0\Ref12.FeedProbe.dll
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\bin\Release\netstandard2.0\Ref12.FeedProbe.pdb
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.csproj.AssemblyReference.cache
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.GeneratedMSBuildEditorConfig.editorconfig
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.AssemblyInfoInputs.cache
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.AssemblyInfo.cs
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.csproj.CoreCompileInputs.cache
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.sourcelink.json
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.dll
+Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\obj\Release\netstandard2.0\Ref12.FeedProbe.pdb

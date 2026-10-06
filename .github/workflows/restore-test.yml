@@ -1,0 +1,24 @@
+name: restore-test
+on: workflow_dispatch
+jobs:
+  restore:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        ver: ["0.0.2", "0.0.*"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - shell: bash
+        run: |
+          mkdir c && cd c
+          cat > nuget.config <<'EOF'
+          <configuration><packageSources><clear/><add key="rel" value="https://github.com/ref12labs/packages/releases/download/feed/index.json" protocolVersion="3"/></packageSources></configuration>
+          EOF
+          cat > c.csproj <<EOF
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Ref12.FeedProbe" Version="${{ matrix.ver }}"/></ItemGroup></Project>
+          EOF
+          export NUGET_PACKAGES="${RUNNER_TEMP}/nuget-fresh"
+          dotnet restore c.csproj -v n | grep -E "Installed|GET|OK|error"

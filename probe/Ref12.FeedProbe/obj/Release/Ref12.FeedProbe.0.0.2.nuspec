@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Ref12.FeedProbe</id>
+    <version>0.0.2</version>
+    <authors>ref12labs</authors>
+    <description>Feed probe</description>
+    <repository type="git" commit="fd9b15f9b9b7123d45b6603c425f16e58f4962b2" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="Q:\src\workspace\hexad-data\project\scratch\s-20261005-193201-14c1\packages\probe\Ref12.FeedProbe\bin\Release\netstandard2.0\Ref12.FeedProbe.dll" target="lib\netstandard2.0\Ref12.FeedProbe.dll" />
+  </files>
+</package>

@@ -1,0 +1,9 @@
+{
+  "version": "3.0.0",
+  "resources": [
+    {
+      "@id": "https://github.com/ref12labs/packages/releases/download/",
+      "@type": "RegistrationsBaseUrl/3.6.0"
+    }
+  ]
+}

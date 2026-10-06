@@ -1,0 +1,66 @@
+{
+  "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json",
+  "@type": [
+    "catalog:CatalogRoot",
+    "PackageRegistration",
+    "catalog:Permalink"
+  ],
+  "count": 1,
+  "items": [
+    {
+      "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#page",
+      "@type": "catalog:CatalogPage",
+      "count": 2,
+      "lower": "0.0.1",
+      "upper": "0.0.2",
+      "items": [
+        {
+          "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.1",
+          "@type": "Package",
+          "commitTimeStamp": "2026-10-06T00:00:00Z",
+          "catalogEntry": {
+            "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.1",
+            "@type": "PackageDetails",
+            "id": "Ref12.FeedProbe",
+            "version": "0.0.1",
+            "authors": "ref12labs",
+            "description": "Feed probe",
+            "listed": true,
+            "packageContent": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe-0.0.1/ref12.feedprobe.0.0.1.nupkg",
+            "dependencyGroups": [
+              {
+                "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.1/dg",
+                "@type": "PackageDependencyGroup",
+                "targetFramework": ".NETStandard2.0"
+              }
+            ]
+          },
+          "packageContent": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe-0.0.1/ref12.feedprobe.0.0.1.nupkg"
+        },
+        {
+          "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.2",
+          "@type": "Package",
+          "commitTimeStamp": "2026-10-06T00:00:00Z",
+          "catalogEntry": {
+            "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.2",
+            "@type": "PackageDetails",
+            "id": "Ref12.FeedProbe",
+            "version": "0.0.2",
+            "authors": "ref12labs",
+            "description": "Feed probe",
+            "listed": true,
+            "packageContent": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe-0.0.2/ref12.feedprobe.0.0.2.nupkg",
+            "dependencyGroups": [
+              {
+                "@id": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe/index.json#0.0.2/dg",
+                "@type": "PackageDependencyGroup",
+                "targetFramework": ".NETStandard2.0"
+              }
+            ]
+          },
+          "packageContent": "https://github.com/ref12labs/packages/releases/download/ref12.feedprobe-0.0.2/ref12.feedprobe.0.0.2.nupkg"
+        }
+      ]
+    }
+  ]
+}
