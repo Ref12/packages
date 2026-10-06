@@ -1,0 +1,19 @@
+{
+  "packages": [
+    {
+      "id": "Ref12.FeedProbe",
+      "repos": [
+        "ref12labs/packages"
+      ],
+      "nugetOrg": false
+    },
+    {
+      "prefix": "Ref12.Wasm",
+      "repos": [
+        "ref12labs/dotnet-wasm-lab"
+      ],
+      "nugetOrg": false,
+      "todo": "TODO: placeholder for the workload-free wasm SDK package. Final name and source repo are not decided; update this entry (the repo may move)."
+    }
+  ]
+}

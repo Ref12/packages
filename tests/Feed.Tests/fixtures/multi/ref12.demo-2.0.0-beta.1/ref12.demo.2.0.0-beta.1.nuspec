@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Ref12.Demo</id>
+    <version>2.0.0-beta.1</version>
+    <authors>ref12labs</authors>
+    <description>Demo 2.0.0-beta.1</description>
+    <dependencies><group targetFramework=".NETStandard2.0"><dependency id="Ref12.Dep" version="1.0.0" /></group><group targetFramework="net8.0"><dependency id="Ref12.Dep" version="[1.0.0, 2.0.0)" /><dependency id="Other.Lib" /></group></dependencies>
+  </metadata>
+</package>

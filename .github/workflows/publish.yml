@@ -1,0 +1,205 @@
+name: publish
+run-name: publish ${{ inputs.repo || github.event.client_payload.repo }} ${{ inputs.tag || inputs.ref || github.event.client_payload.tag || github.event.client_payload.ref }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Source repo (owner/name). Must be listed in packages.json.
+        required: true
+        type: string
+      tag:
+        description: "Release source: tag of the source release holding the .nupkg"
+        required: false
+        type: string
+      asset:
+        description: "Release source: .nupkg asset name (or a glob matching exactly one asset)"
+        required: false
+        type: string
+      ref:
+        description: "Build source: branch, tag or sha of the source repo to dotnet pack"
+        required: false
+        type: string
+      project:
+        description: "Build source: project path inside the source repo"
+        required: false
+        type: string
+      nuget_org:
+        description: Also push to nuget.org (Trusted Publishing; needs vars.NUGET_USER and packages.json nugetOrg)
+        required: false
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [publish]   # client_payload: repo, and tag+asset or ref+project; optional nuget_org
+
+permissions:
+  contents: read
+
+env:
+  REPO: ${{ inputs.repo || github.event.client_payload.repo }}
+  TAG: ${{ inputs.tag || github.event.client_payload.tag }}
+  ASSET: ${{ inputs.asset || github.event.client_payload.asset }}
+  REF: ${{ inputs.ref || github.event.client_payload.ref }}
+  PROJECT: ${{ inputs.project || github.event.client_payload.project }}
+  NUGET_ORG: ${{ inputs.nuget_org || github.event.client_payload.nuget_org }}
+
+jobs:
+  # Read-only: fetch or build the package, verify it, stage it. Source code runs here, with no write token.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.verify.outputs.id }}
+      idl: ${{ steps.verify.outputs.idl }}
+      version: ${{ steps.verify.outputs.version }}
+      tag: ${{ steps.verify.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+      - name: Check inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "::error::repo must be owner/name, got '$REPO'"; exit 1; }
+          if [ -n "$TAG$ASSET" ] && [ -n "$REF$PROJECT" ]; then echo "::error::Give either tag+asset (release source) or ref+project (build source), not both."; exit 1; fi
+          if [ -n "$TAG" ] && [ -n "$ASSET" ]; then echo "MODE=release" >> "$GITHUB_ENV"
+          elif [ -n "$REF" ] && [ -n "$PROJECT" ]; then echo "MODE=build" >> "$GITHUB_ENV"
+          else echo "::error::Give either tag+asset or ref+project."; exit 1; fi
+          if [ -n "$PROJECT" ]; then
+            case "$PROJECT" in /*|*..*|*\\*) echo "::error::project must be a relative path inside the source repo"; exit 1;; esac
+          fi
+          case "$ASSET" in */*|*\\*) echo "::error::asset must be a plain name"; exit 1;; esac
+      - name: Build the feed tool
+        shell: bash
+        run: dotnet build tools/Feed -c Release -o "$RUNNER_TEMP/feedtool" -nologo -v q
+      - name: Refuse repos that are not in packages.json
+        shell: bash
+        run: dotnet "$RUNNER_TEMP/feedtool/Feed.dll" allowed-repo --allowlist packages.json --repo "$REPO"
+      - name: Fetch the release asset
+        if: env.MODE == 'release'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dl"
+          gh release download "$TAG" --repo "$REPO" --pattern "$ASSET" --dir "$RUNNER_TEMP/dl"
+          n=$(find "$RUNNER_TEMP/dl" -maxdepth 1 -name '*.nupkg' | wc -l)
+          [ "$n" -eq 1 ] || { echo "::error::Expected exactly one .nupkg from asset '$ASSET', got $n."; exit 1; }
+      - name: Check out the source
+        if: env.MODE == 'build'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.REPO }}
+          ref: ${{ env.REF }}
+          path: src
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Pack
+        if: env.MODE == 'build'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dl"
+          dotnet pack "src/$PROJECT" -c Release -o "$RUNNER_TEMP/dl" -p:ContinuousIntegrationBuild=true
+          n=$(find "$RUNNER_TEMP/dl" -maxdepth 1 -name '*.nupkg' | wc -l)
+          [ "$n" -eq 1 ] || { echo "::error::dotnet pack must produce exactly one .nupkg, got $n."; exit 1; }
+      - name: Verify (id and version from the nuspec, tag, allowlist)
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          nupkg=$(find "$RUNNER_TEMP/dl" -maxdepth 1 -name '*.nupkg')
+          args=(verify --nupkg "$nupkg" --allowlist packages.json --repo "$REPO" --out-dir "$GITHUB_WORKSPACE/staged")
+          [ "$MODE" = release ] && args+=(--tag "$TAG")
+          [ "$NUGET_ORG" = true ] && args+=(--nuget-org)
+          dotnet "$RUNNER_TEMP/feedtool/Feed.dll" "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: staged
+          path: staged/
+          if-no-files-found: error
+
+  # Creates the immutable version release. Fails if it exists.
+  release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: staged
+          path: staged
+      - name: Create release ${{ needs.prepare.outputs.tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PTAG: ${{ needs.prepare.outputs.tag }}
+          PID: ${{ needs.prepare.outputs.id }}
+          PVER: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$PTAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $PTAG already exists. Versions are immutable; publish a new version instead."
+            exit 1
+          fi
+          pre=(); [[ "$PVER" == *-* ]] && pre=(--prerelease)
+          gh release create "$PTAG" --repo "$GITHUB_REPOSITORY" --title "$PID $PVER" --latest=false "${pre[@]}" \
+            --notes "Source: $REPO ${TAG:-$REF}. Published by workflow run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            staged/*.nupkg staged/*.nuspec
+      - name: nuget.org not configured
+        if: env.NUGET_ORG == 'true' && vars.NUGET_USER == ''
+        run: echo "::notice::nuget_org was requested but vars.NUGET_USER is not set; skipping nuget.org. See README, 'Enable nuget.org'."
+
+  # Regenerates index.json; one at a time per package id so two publishes cannot race.
+  index:
+    needs: [prepare, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: index-${{ needs.prepare.outputs.idl }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - name: Rebuild the registration index
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/reindex.sh "${{ needs.prepare.outputs.id }}"
+
+  nuget-org:
+    needs: [prepare, release]
+    if: inputs.nuget_org == true || github.event.client_payload.nuget_org == true || github.event.client_payload.nuget_org == 'true'
+    runs-on: ubuntu-latest
+    environment: nuget-org
+    permissions:
+      id-token: write   # Trusted Publishing: GitHub OIDC token exchanged for a short-lived key
+      contents: read
+    steps:
+      - name: Skip when Trusted Publishing is not set up
+        if: vars.NUGET_USER == ''
+        run: echo "::notice::vars.NUGET_USER is not set; skipping the nuget.org push. See README, 'Enable nuget.org'."
+      - uses: actions/download-artifact@v4
+        if: vars.NUGET_USER != ''
+        with:
+          name: staged
+          path: staged
+      - uses: NuGet/login@v1
+        if: vars.NUGET_USER != ''
+        id: login
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Push to nuget.org
+        if: vars.NUGET_USER != ''
+        shell: bash
+        env:
+          NUGET_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}   # short-lived, minted by NuGet/login; not a stored secret
+        run: dotnet nuget push staged/*.nupkg --api-key "$NUGET_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate

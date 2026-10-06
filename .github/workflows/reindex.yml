@@ -1,0 +1,30 @@
+name: reindex
+run-name: reindex ${{ inputs.id || 'all packages' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: Package id to rebuild; empty rebuilds every package and the service index (repair). Avoid running 'all' during a publish.
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: index-${{ inputs.id || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PKG: ${{ inputs.id }}
+        run: tools/reindex.sh "$PKG"

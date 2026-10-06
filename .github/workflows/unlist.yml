@@ -1,0 +1,52 @@
+name: unlist
+run-name: ${{ inputs.relist && 'relist' || 'unlist' }} ${{ inputs.id }} ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: Package id
+        required: true
+        type: string
+      version:
+        description: Normalized version (as in the release name, e.g. 0.0.2 or 1.0.0-beta.1)
+        required: true
+        type: string
+      relist:
+        description: "Undo: list the version again"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: index-${{ inputs.id }}
+  cancel-in-progress: false
+
+jobs:
+  unlist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PID: ${{ inputs.id }}
+          PVER: ${{ inputs.version }}
+          RELIST: ${{ inputs.relist }}
+        run: |
+          set -euo pipefail
+          [[ "$PID" =~ ^[A-Za-z0-9_.-]+$ && "$PVER" =~ ^[A-Za-z0-9_.+-]+$ ]] || { echo "::error::bad id or version"; exit 1; }
+          tag="$(printf '%s-%s' "$PID" "$PVER" | tr '[:upper:]' '[:lower:]')"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null || { echo "::error::No release $tag. Nothing is deleted by this workflow; check the id and version."; exit 1; }
+          if [ "$RELIST" = true ]; then
+            gh release delete-asset "$tag" unlisted --repo "$GITHUB_REPOSITORY" --yes || echo "was not unlisted"
+          else
+            echo "unlisted" > "$RUNNER_TEMP/unlisted"
+            gh release upload "$tag" "$RUNNER_TEMP/unlisted" --repo "$GITHUB_REPOSITORY" --clobber
+          fi
+          tools/reindex.sh "$PID"

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Ref12.FeedProbe</PackageId>
-    <Version>0.0.1</Version>
+    <Version>0.0.3</Version>
     <Authors>ref12labs</Authors>
     <Description>Feed probe</Description>
   </PropertyGroup>
