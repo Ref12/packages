@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- packing only: dotnet pack Ref12.WasmNative -p:PackageVersion=1.0.0 -o artifacts -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NuspecFile>Ref12.WasmNative.nuspec</NuspecFile>
+    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+    <PackageVersion Condition="'$(PackageVersion)' == ''">0.1.0</PackageVersion>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>$(NoWarn);NU5128;NU5127;NU5110;NU5111</NoWarn>
+  </PropertyGroup>
+  <!-- the nuspec's repository commit: GITHUB_SHA in CI, else git; empty when neither is available -->
+  <Target Name="R12SetNuspecProperties" BeforeTargets="GenerateNuspec;_LoadPackInputItems">
+    <PropertyGroup><R12Commit>$(GITHUB_SHA)</R12Commit></PropertyGroup>
+    <Exec Condition="'$(R12Commit)' == ''" Command="git rev-parse HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardErrorImportance="low" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="R12Commit" />
+    </Exec>
+    <PropertyGroup>
+      <NuspecProperties>version=$(PackageVersion);commit=$(R12Commit)</NuspecProperties>
+    </PropertyGroup>
+  </Target>
+</Project>

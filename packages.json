@@ -8,12 +8,11 @@
       "nugetOrg": false
     },
     {
-      "prefix": "Ref12.Wasm",
+      "id": "Ref12.WasmNative",
       "repos": [
-        "ref12labs/dotnet-wasm-lab"
+        "ref12labs/packages"
       ],
-      "nugetOrg": false,
-      "todo": "TODO: placeholder for the workload-free wasm SDK package. Final name and source repo are not decided; update this entry (the repo may move)."
+      "nugetOrg": false
     }
   ]
 }

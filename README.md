@@ -28,7 +28,7 @@ No slash tags (git cannot have tag `x` and `x/1.0`). Ids and versions are lowerc
   <packageSourceMapping>
     <packageSource key="ref12">
       <package pattern="Ref12.FeedProbe" />
-      <package pattern="Ref12.Wasm*" />
+      <package pattern="Ref12.WasmNative" />
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />
@@ -46,7 +46,7 @@ A package may be published only if its id and source repo are in `packages.json`
 ```json
 { "packages": [
   { "id": "Ref12.FeedProbe", "repos": ["ref12labs/packages"], "nugetOrg": false },
-  { "prefix": "Ref12.Wasm", "repos": ["ref12labs/dotnet-wasm-lab"], "nugetOrg": false, "todo": "..." }
+  { "id": "Ref12.WasmNative", "repos": ["ref12labs/packages"], "nugetOrg": false }
 ] }
 ```
 
@@ -129,4 +129,5 @@ Until `NUGET_USER` is set the nuget.org job prints a notice and skips. Docs: htt
 - `tools/reindex.sh`: collects release metadata with `gh`, runs the tool, uploads indexes.
 - `dotnet test tests/Feed.Tests`: version ordering, index generation on fixtures (versions, prereleases, dependency groups, unlisted, paging), allowlist and verify checks, and a real `dotnet restore` from a local feed built by the generator and served over HTTP with a GitHub-style 302. Runs on ubuntu and windows (`test.yml`).
 - `restore-test.yml`: restores the probe from the live feed on ubuntu and windows.
+- `wasm-native/`: Ref12.WasmNative (workload-free relink/AOT SDK for browser-wasm), see its README; CI in `wasm-native.yml`.
 - `feed-b/`, `probe/`: the original experiment and the probe package.

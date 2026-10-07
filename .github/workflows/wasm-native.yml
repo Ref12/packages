@@ -1,0 +1,59 @@
+name: wasm-native
+# Ref12.WasmNative: plain / relink / AOT browser-wasm publish from a CLEAN NuGet cache, with NO workloads installed,
+# on Linux + Windows x (.NET 10 SDK, newest .NET 11 preview SDK). The weekly run catches a new preview that breaks it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
+  push:
+    paths: ['wasm-native/**', '.github/workflows/wasm-native.yml']
+  pull_request:
+    paths: ['wasm-native/**', '.github/workflows/wasm-native.yml']
+permissions:
+  contents: read
+jobs:
+  proof:
+    name: ${{ matrix.os }} / SDK ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - { sdk: '10.0', name: '10.0', channel: '10.0', quality: '', tfm: net10.0 }
+          - { sdk: '11.0-preview', name: '11.0 preview', channel: '11.0', quality: preview, tfm: net11.0 }
+        sdk: ['10.0', '11.0-preview']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # Deliberately NO package cache: every run starts from an empty NuGet cache (that is the proof).
+      # The scripts install the SDK into a temp dir with dotnet-install (never a workload) and fail if
+      # 'dotnet workload list' shows anything, before and after the builds.
+      - name: Linux proof
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -sSL https://dot.net/v1/dotnet-install.sh -o "$RUNNER_TEMP/di.sh"
+          bash "$RUNNER_TEMP/di.sh" --channel '${{ matrix.channel }}' ${{ matrix.quality && format('--quality {0}', matrix.quality) || '' }} --install-dir "$RUNNER_TEMP/dotnet"
+          export DOTNET_ROOT="$RUNNER_TEMP/dotnet" PATH="$RUNNER_TEMP/dotnet:$PATH" DOTNET_MULTILEVEL_LOOKUP=0
+          unset MSBuildSDKsPath MSBUILD_EXE_PATH
+          dotnet --version
+          # assert: no workload installed (the only thing allowed in the output is the "no workloads" text)
+          wl=$(dotnet workload list 2>&1); echo "$wl"
+          if echo "$wl" | grep -Eqi 'wasm|emscripten|maui|android|ios|\bwasi\b'; then echo "::error::a workload is installed"; exit 1; fi
+          bash wasm-native/scripts/proof.sh '${{ matrix.tfm }}'
+      - name: Windows proof
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./wasm-native/scripts/proof.ps1 -Channel '${{ matrix.channel }}' -Quality '${{ matrix.quality }}' -Tfm '${{ matrix.tfm }}'
+      - name: Summary
+        if: always()
+        shell: bash
+        run: cat wasm-native/results/*.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-${{ matrix.os }}-${{ matrix.tfm }}
+          path: wasm-native/results/

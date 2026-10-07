@@ -22,7 +22,7 @@ if(Test-Path $vsInst){ Rename-Item $vsInst '_Instances.hidden'; Log "(hid $vsIns
 function AssertEmpty($when){ $wl=(& $dn workload list 2>&1 | Out-String); Log "## dotnet workload list ($when)"; Log ('~~~'+$wl+'~~~'); if($wl -match 'wasm|emscripten|maui|android|ios'){ throw 'a workload is visible' } }
 Log "# Ref12.WasmNative proof, $Tfm (Windows)"; Log "SDK: $(& $dn --version)"; AssertEmpty 'before'
 $ver='0.0.1-ci'
-& $dn pack src/Ref12.WasmNative -c Release "-p:PackageVersion=$ver" -o artifacts -v:q -nologo | Out-Null; if($LASTEXITCODE){ Restore-VS; exit 1 }
+& $dn pack Ref12.WasmNative -c Release "-p:PackageVersion=$ver" -o artifacts -v:q -nologo | Out-Null; if($LASTEXITCODE){ Restore-VS; exit 1 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $z=[IO.Compression.ZipFile]::OpenRead((Get-ChildItem artifacts/*.nupkg | Select-Object -First 1).FullName); Log ("nupkg entries: " + (($z.Entries | ForEach-Object FullName) -join ', ')); $z.Dispose()
 $feed=Join-Path $Work 'feed'; New-Item -ItemType Directory $feed | Out-Null; Copy-Item artifacts/*.nupkg $feed

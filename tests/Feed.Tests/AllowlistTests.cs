@@ -32,11 +32,12 @@ public class AllowlistTests
     }
 
     [Fact]
-    public void Real_file_has_wasm_prefix_placeholder()
+    public void Real_file_has_exact_wasmnative_entry()
     {
         var a = Repo();
-        Assert.True(a.Check("Ref12.Wasm.Sdk", "ref12labs/dotnet-wasm-lab").Ok);
-        Assert.False(a.Check("Ref12.Wasm.Sdk", "ref12labs/packages").Ok);
+        Assert.True(a.Check("Ref12.WasmNative", "ref12labs/packages").Ok);
+        Assert.False(a.Check("Ref12.WasmNative", "ref12labs/dotnet-wasm-lab").Ok);
+        Assert.False(a.Check("Ref12.WasmNativeX", "ref12labs/packages").Ok);
         Assert.False(a.Check("Ref12.Other", "ref12labs/packages").Ok);
     }
 

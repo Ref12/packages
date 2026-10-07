@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Ref12.WasmNative</id>
+    <version>$version$</version>
+    <authors>ref12labs</authors>
+    <description>MSBuild project SDK that makes WasmBuildNative (relink) and AOT builds of Microsoft.NET.Sdk.WebAssembly projects work without 'dotnet workload install wasm-tools': it fetches the workload's packs from NuGet at evaluation time. Supports the .NET 10 SDK and the .NET 11 preview.</description>
+    <tags>wasm webassembly browser-wasm msbuild-sdk aot emscripten workload dotnet</tags>
+    <projectUrl>https://github.com/ref12labs/packages/tree/main/wasm-native</projectUrl>
+    <repository type="git" url="https://github.com/ref12labs/packages" commit="$commit$" />
+    <license type="expression">MIT</license>
+    <readme>README.md</readme>
+    <packageTypes><packageType name="MSBuildSdk" /></packageTypes>
+  </metadata>
+  <files>
+    <file src="README.md" target="README.md" />
+    <file src="LICENSE" target="LICENSE" />
+    <file src="Sdk\*" target="Sdk" />
+    <file src="build\*.*" target="build" />
+    <file src="build\fallback\*" target="build\fallback" />
+  </files>
+</package>
