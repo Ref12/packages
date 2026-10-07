@@ -25,7 +25,7 @@ public class AllowlistTests
     {
         var a = Repo();
         Assert.True(a.Check("Ref12.FeedProbe", "Ref12/packages").Ok);
-        Assert.True(a.Check("ref12.feedprobe", "REF12LABS/Packages").Ok);   // case-insensitive
+        Assert.True(a.Check("ref12.feedprobe", "REF12/Packages").Ok);   // case-insensitive
         var bad = a.Check("Ref12.FeedProbe", "evil/fork");
         Assert.False(bad.Ok);
         Assert.Contains("Ref12/packages", bad.Message);
