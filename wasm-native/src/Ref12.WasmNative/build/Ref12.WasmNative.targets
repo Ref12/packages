@@ -1,0 +1,280 @@
+<!--
+  Ref12.WasmNative.targets: imported through CustomAfterMicrosoftCommonTargets, i.e. after the project body and the SDK's workload manifests, before the WebAssembly SDK targets.
+  Everything is evaluation-time (property functions + NuGet-SDK imports): the NuGet SDK resolver restores each pack into
+  the normal NuGet cache while MSBuild evaluates, i.e. before restore/build, with no 'dotnet workload'.
+  1. decide whether relink/AOT is needed (same triggers as the SDK's own workload check)
+  2. work out the SDK band and check it was tested
+  3. get the workload manifests for the band (NuGet -> SDK's installed copy -> built-in table)
+  4. read the Sdk packs for this host out of them, import each as an MSBuild SDK, at the SDK's bundled runtime version
+-->
+<Project>
+  <PropertyGroup Condition="'$(Ref12WasmNativeActive)' == 'true'">
+    <_R12NeedsNative Condition="'$(WasmBuildNative)' == 'true' or '$(RunAOTCompilation)' == 'true' or '$(WasmEnableSIMD)' == 'false' or '$(WasmEnableExceptionHandling)' == 'false' or '$(InvariantTimezone)' == 'true' or '$(WasmNativeStrip)' == 'false' or '$(WasmNativeDebugSymbols)' == 'true' or '$(WasmSingleFileBundle)' == 'false' or '$(EnableDiagnostics)' == 'true' or '$(WasmProfilers)' != '' or '$(WasmGenerateAppBundle)' == 'true' or '$(EmccInitialHeapSize)' != '' or '$(EmccMaximumHeapSize)' != ''">true</_R12NeedsNative>
+    <_R12NeedsAot Condition="'$(RunAOTCompilation)' == 'true' or '$(Ref12WasmNativeAot)' == 'true'">true</_R12NeedsAot>
+    <_R12NeedsNative Condition="'$(_R12NeedsAot)' == 'true'">true</_R12NeedsNative>
+    <Ref12WasmNativeAotOnly Condition="'$(Ref12WasmNativeAotOnly)' == ''">MonoAOTCompiler</Ref12WasmNativeAotOnly>
+    <Ref12WasmNativeVersion Condition="'$(Ref12WasmNativeVersion)' == ''">$(BundledNETCoreAppPackageVersion)</Ref12WasmNativeVersion>
+    <Ref12WasmNativeUntested Condition="'$(Ref12WasmNativeUntested)' == ''">warn</Ref12WasmNativeUntested>
+
+    <!-- band: 10.0.401 -> 10.0.4xx ; 11.0.100-rc.1.26425.128 -> 11.0.1xx-rc.1.  Manifest folder / NuGet suffix: 10.0.100, 11.0.100-rc.1 -->
+    <R12_Core>$([System.Text.RegularExpressions.Regex]::Match('$(NETCoreSdkVersion)', '^[0-9]+\.[0-9]+\.[0-9]+').Value)</R12_Core>
+    <R12_Pre>$([System.Text.RegularExpressions.Regex]::Match('$(NETCoreSdkVersion)', '-[A-Za-z]+\.[0-9]+').Value)</R12_Pre>
+    <R12_MajMin>$([System.Text.RegularExpressions.Regex]::Match('$(R12_Core)', '^[0-9]+\.[0-9]+').Value)</R12_MajMin>
+    <R12_Hund>$([System.Text.RegularExpressions.Regex]::Match('$(R12_Core)', '[0-9]+$').Value)</R12_Hund>
+    <R12_Hund>$([System.Math]::Floor($([MSBuild]::Divide($(R12_Hund), 100))))</R12_Hund>
+    <Ref12WasmNativeSdkBand>$(R12_MajMin).$(R12_Hund)xx$(R12_Pre)</Ref12WasmNativeSdkBand>
+    <R12_Band>$(R12_MajMin).$(R12_Hund)00$(R12_Pre)</R12_Band>
+    <R12_Root>$([MSBuild]::NormalizeDirectory('$(NetCoreTargetingPackRoot)', '..', 'sdk-manifests'))</R12_Root>
+    <_R12Tested>false</_R12Tested>
+    <_R12Tested Condition="$([System.String]::Copy(';$(Ref12WasmNativeTestedBands);').Contains(';$(Ref12WasmNativeSdkBand);'))">true</_R12Tested>
+  </PropertyGroup>
+  <!-- no manifest folder of exactly that name (SDK 10.0.4xx ships manifests as 10.0.100 since the band name differs): any folder of the same major.minor -->
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true' and !Exists('$(R12_Root)$(R12_Band)') and Exists('$(R12_Root)')">
+    <R12_Dirs>$([System.IO.Directory]::GetDirectories('$(R12_Root)', '$(R12_MajMin).*'))</R12_Dirs>
+    <R12_Dirs>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_Dirs)', '[^;]*[/\\]', ''))</R12_Dirs>
+    <R12_Dirs>$(R12_Dirs.Replace(';', '|'))||||||||</R12_Dirs>
+    <R12_D0>$(R12_Dirs.Split('|')[0])</R12_D0>
+    <R12_Band Condition="'$(R12_D0)' != ''">$(R12_D0)</R12_Band>
+  </PropertyGroup>
+
+  <!-- manifest Mono.ToolChain.Current: version = the newest one the SDK band has installed (what the SDK itself would use) -->
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'"><R12_V></R12_V><R12_S></R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true' and Exists('$(R12_Root)$(R12_Band)/microsoft.net.workload.mono.toolchain.current')">
+    <R12_V>$([System.IO.Directory]::GetDirectories('$(R12_Root)$(R12_Band)/microsoft.net.workload.mono.toolchain.current'))</R12_V>
+    <R12_V>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_V)', '[^;]*[/\\]', ''))</R12_V>
+    <R12_V>$(R12_V.Replace(';', '|'))||||||||</R12_V>
+    <R12_CurA>$(R12_V.Split('|')[0])</R12_CurA>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[1])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[2])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[3])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[4])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[5])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[6])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[7])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurA)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurA)')))"><R12_CurA>$(R12_S)</R12_CurA></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_CurA)' != ''">
+    <R12_IdA>Microsoft.NET.Workload.Mono.ToolChain.Current.Manifest-$(R12_Band)</R12_IdA>
+    <R12_PgA>$(NuGetPackageRoot)</R12_PgA>
+    <R12_PgA Condition="'$(R12_PgA)' == ''">$(NUGET_PACKAGES)</R12_PgA>
+    <R12_PgA Condition="'$(R12_PgA)' == '' and '$(HOME)' != ''">$(HOME)/.nuget/packages/</R12_PgA>
+    <R12_PgA Condition="'$(R12_PgA)' == '' and '$(USERPROFILE)' != ''">$(USERPROFILE)/.nuget/packages/</R12_PgA>
+    <R12_PgA>$([MSBuild]::EnsureTrailingSlash('$(R12_PgA)'))$(R12_IdA.ToLowerInvariant())/$(R12_CurA.ToLowerInvariant())/data/WorkloadManifest.json</R12_PgA>
+    <R12_SkA>$(R12_Root)$(R12_Band)/microsoft.net.workload.mono.toolchain.current/$(R12_CurA)/WorkloadManifest.json</R12_SkA>
+  </PropertyGroup>
+  <!-- the manifest package has no Sdk.props: a wildcard that matches nothing makes the NuGet SDK resolver download+extract it, and the import a no-op -->
+  <Import Condition="'$(R12_CurA)' != '' and '$(Ref12WasmNativeManifestSource)' != 'sdk' and '$(Ref12WasmNativeManifestSource)' != 'table'" Project="../data/R12.none*.props" Sdk="$(R12_IdA)" Version="$(R12_CurA)" />
+  <PropertyGroup Condition="'$(R12_CurA)' != '' and '$(Ref12WasmNativeManifestSource)' != 'sdk' and '$(Ref12WasmNativeManifestSource)' != 'table' and Exists('$(R12_PgA)')">
+    <R12_TA>$([System.IO.File]::ReadAllText('$(R12_PgA)'))</R12_TA>
+    <R12_OA>nuget $(R12_IdA) $(R12_CurA)</R12_OA>
+  </PropertyGroup>
+
+  <!-- manifest Emscripten.Current: version = the newest one the SDK band has installed (what the SDK itself would use) -->
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'"><R12_V></R12_V><R12_S></R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true' and Exists('$(R12_Root)$(R12_Band)/microsoft.net.workload.emscripten.current')">
+    <R12_V>$([System.IO.Directory]::GetDirectories('$(R12_Root)$(R12_Band)/microsoft.net.workload.emscripten.current'))</R12_V>
+    <R12_V>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_V)', '[^;]*[/\\]', ''))</R12_V>
+    <R12_V>$(R12_V.Replace(';', '|'))||||||||</R12_V>
+    <R12_CurB>$(R12_V.Split('|')[0])</R12_CurB>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[1])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[2])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[3])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[4])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[5])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[6])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_V)' != ''"><R12_S>$(R12_V.Split('|')[7])</R12_S></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_S)' != '' and ('$(R12_CurB)' == '' or $([MSBuild]::VersionGreaterThan('$(R12_S)', '$(R12_CurB)')))"><R12_CurB>$(R12_S)</R12_CurB></PropertyGroup>
+  <PropertyGroup Condition="'$(R12_CurB)' != ''">
+    <R12_IdB>Microsoft.NET.Workload.Emscripten.Current.Manifest-$(R12_Band)</R12_IdB>
+    <R12_PgB>$(NuGetPackageRoot)</R12_PgB>
+    <R12_PgB Condition="'$(R12_PgB)' == ''">$(NUGET_PACKAGES)</R12_PgB>
+    <R12_PgB Condition="'$(R12_PgB)' == '' and '$(HOME)' != ''">$(HOME)/.nuget/packages/</R12_PgB>
+    <R12_PgB Condition="'$(R12_PgB)' == '' and '$(USERPROFILE)' != ''">$(USERPROFILE)/.nuget/packages/</R12_PgB>
+    <R12_PgB>$([MSBuild]::EnsureTrailingSlash('$(R12_PgB)'))$(R12_IdB.ToLowerInvariant())/$(R12_CurB.ToLowerInvariant())/data/WorkloadManifest.json</R12_PgB>
+    <R12_SkB>$(R12_Root)$(R12_Band)/microsoft.net.workload.emscripten.current/$(R12_CurB)/WorkloadManifest.json</R12_SkB>
+  </PropertyGroup>
+  <!-- the manifest package has no Sdk.props: a wildcard that matches nothing makes the NuGet SDK resolver download+extract it, and the import a no-op -->
+  <Import Condition="'$(R12_CurB)' != '' and '$(Ref12WasmNativeManifestSource)' != 'sdk' and '$(Ref12WasmNativeManifestSource)' != 'table'" Project="../data/R12.none*.props" Sdk="$(R12_IdB)" Version="$(R12_CurB)" />
+  <PropertyGroup Condition="'$(R12_CurB)' != '' and '$(Ref12WasmNativeManifestSource)' != 'sdk' and '$(Ref12WasmNativeManifestSource)' != 'table' and Exists('$(R12_PgB)')">
+    <R12_TB>$([System.IO.File]::ReadAllText('$(R12_PgB)'))</R12_TB>
+    <R12_OB>nuget $(R12_IdB) $(R12_CurB)</R12_OB>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_Text>$(R12_TA)$(R12_TB)</R12_Text>
+    <Ref12WasmNativeManifestOrigin>$(R12_OA); $(R12_OB)</Ref12WasmNativeManifestOrigin>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true' and '$(R12_TA)' == '' and '$(R12_TB)' == '' and '$(Ref12WasmNativeManifestSource)' != 'table' and Exists('$(R12_SkA)') and Exists('$(R12_SkB)')">
+    <R12_Text>$([System.IO.File]::ReadAllText('$(R12_SkA)'))$([System.IO.File]::ReadAllText('$(R12_SkB)'))</R12_Text>
+    <Ref12WasmNativeManifestOrigin>SDK-installed manifests of band $(R12_Band)</Ref12WasmNativeManifestOrigin>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true' and '$(R12_Text)' == ''">
+    <R12_Text>$([System.IO.File]::ReadAllText('$(Ref12WasmNativeRoot)fallback/net$(Ref12WasmNativeMajorFile).json'))</R12_Text>
+    <Ref12WasmNativeManifestOrigin>built-in table net$(Ref12WasmNativeMajorFile)</Ref12WasmNativeManifestOrigin>
+  </PropertyGroup>
+
+  <!-- host RID, then the Sdk-kind packs of those manifests that make up relink/AOT, resolved for this host: "<manifest pack id>": { "kind": "Sdk", "version": .., "alias-to": { "<host rid>"|"any": "<real id>" } } -->
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <_R12Arch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_R12Arch>
+    <Ref12WasmNativeHostRid Condition="'$(Ref12WasmNativeHostRid)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-$(_R12Arch)</Ref12WasmNativeHostRid>
+    <Ref12WasmNativeHostRid Condition="'$(Ref12WasmNativeHostRid)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">osx-$(_R12Arch)</Ref12WasmNativeHostRid>
+    <Ref12WasmNativeHostRid Condition="'$(Ref12WasmNativeHostRid)' == '' and $([MSBuild]::IsOSPlatform('Linux')) and (Exists('/lib/ld-musl-x86_64.so.1') or Exists('/lib/ld-musl-aarch64.so.1'))">linux-musl-$(_R12Arch)</Ref12WasmNativeHostRid>
+    <Ref12WasmNativeHostRid Condition="'$(Ref12WasmNativeHostRid)' == ''">linux-$(_R12Arch)</Ref12WasmNativeHostRid>
+    <R12_Flat>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_Text)', '\s+', ' '))</R12_Flat>
+    <R12_Packs>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_Flat)', '"(?:$(Ref12WasmNativePackInclude))" ?: ?\{[^{}]*"alias-to" ?: ?\{[^}]*?"(?:$(Ref12WasmNativeHostRid)|any)" ?: ?"([^"]+)"[^}]*\}|.', '$1|'))</R12_Packs>
+    <R12_Packs>$([System.Text.RegularExpressions.Regex]::Replace('$(R12_Packs)', '[|]+', '|').TrimStart('|'))||||||||||||||||</R12_Packs>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I1>$(R12_Packs.Split('|')[0])</R12_I1>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I1)' != ''">
+    <R12_On1 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I1)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On1>
+    <R12_Tg1 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I1)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg1>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On1)' == 'true'" Project="Sdk.props" Sdk="$(R12_I1)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On1)' == 'true' and '$(R12_Tg1)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I1)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I2>$(R12_Packs.Split('|')[1])</R12_I2>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I2)' != ''">
+    <R12_On2 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I2)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On2>
+    <R12_Tg2 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I2)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg2>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On2)' == 'true'" Project="Sdk.props" Sdk="$(R12_I2)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On2)' == 'true' and '$(R12_Tg2)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I2)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I3>$(R12_Packs.Split('|')[2])</R12_I3>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I3)' != ''">
+    <R12_On3 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I3)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On3>
+    <R12_Tg3 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I3)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg3>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On3)' == 'true'" Project="Sdk.props" Sdk="$(R12_I3)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On3)' == 'true' and '$(R12_Tg3)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I3)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I4>$(R12_Packs.Split('|')[3])</R12_I4>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I4)' != ''">
+    <R12_On4 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I4)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On4>
+    <R12_Tg4 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I4)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg4>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On4)' == 'true'" Project="Sdk.props" Sdk="$(R12_I4)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On4)' == 'true' and '$(R12_Tg4)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I4)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I5>$(R12_Packs.Split('|')[4])</R12_I5>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I5)' != ''">
+    <R12_On5 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I5)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On5>
+    <R12_Tg5 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I5)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg5>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On5)' == 'true'" Project="Sdk.props" Sdk="$(R12_I5)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On5)' == 'true' and '$(R12_Tg5)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I5)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I6>$(R12_Packs.Split('|')[5])</R12_I6>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I6)' != ''">
+    <R12_On6 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I6)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On6>
+    <R12_Tg6 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I6)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg6>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On6)' == 'true'" Project="Sdk.props" Sdk="$(R12_I6)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On6)' == 'true' and '$(R12_Tg6)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I6)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I7>$(R12_Packs.Split('|')[6])</R12_I7>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I7)' != ''">
+    <R12_On7 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I7)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On7>
+    <R12_Tg7 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I7)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg7>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On7)' == 'true'" Project="Sdk.props" Sdk="$(R12_I7)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On7)' == 'true' and '$(R12_Tg7)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I7)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I8>$(R12_Packs.Split('|')[7])</R12_I8>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I8)' != ''">
+    <R12_On8 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I8)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On8>
+    <R12_Tg8 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I8)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg8>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On8)' == 'true'" Project="Sdk.props" Sdk="$(R12_I8)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On8)' == 'true' and '$(R12_Tg8)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I8)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I9>$(R12_Packs.Split('|')[8])</R12_I9>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I9)' != ''">
+    <R12_On9 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I9)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On9>
+    <R12_Tg9 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I9)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg9>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On9)' == 'true'" Project="Sdk.props" Sdk="$(R12_I9)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On9)' == 'true' and '$(R12_Tg9)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I9)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I10>$(R12_Packs.Split('|')[9])</R12_I10>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I10)' != ''">
+    <R12_On10 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I10)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On10>
+    <R12_Tg10 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I10)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg10>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On10)' == 'true'" Project="Sdk.props" Sdk="$(R12_I10)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On10)' == 'true' and '$(R12_Tg10)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I10)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I11>$(R12_Packs.Split('|')[10])</R12_I11>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I11)' != ''">
+    <R12_On11 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I11)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On11>
+    <R12_Tg11 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I11)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg11>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On11)' == 'true'" Project="Sdk.props" Sdk="$(R12_I11)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On11)' == 'true' and '$(R12_Tg11)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I11)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I12>$(R12_Packs.Split('|')[11])</R12_I12>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I12)' != ''">
+    <R12_On12 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I12)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On12>
+    <R12_Tg12 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I12)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg12>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On12)' == 'true'" Project="Sdk.props" Sdk="$(R12_I12)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On12)' == 'true' and '$(R12_Tg12)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I12)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I13>$(R12_Packs.Split('|')[12])</R12_I13>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I13)' != ''">
+    <R12_On13 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I13)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On13>
+    <R12_Tg13 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I13)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg13>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On13)' == 'true'" Project="Sdk.props" Sdk="$(R12_I13)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On13)' == 'true' and '$(R12_Tg13)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I13)" Version="$(Ref12WasmNativeVersion)" />
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <R12_I14>$(R12_Packs.Split('|')[13])</R12_I14>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(R12_I14)' != ''">
+    <R12_On14 Condition="'$(_R12NeedsAot)' == 'true' or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I14)', '$(Ref12WasmNativeAotOnly)'))">true</R12_On14>
+    <R12_Tg14 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(R12_I14)', '$(Ref12WasmNativeTargetsPacks)'))">true</R12_Tg14>
+  </PropertyGroup>
+  <Import Condition="'$(R12_On14)' == 'true'" Project="Sdk.props" Sdk="$(R12_I14)" Version="$(Ref12WasmNativeVersion)" />
+  <Import Condition="'$(R12_On14)' == 'true' and '$(R12_Tg14)' == 'true'" Project="Sdk.targets" Sdk="$(R12_I14)" Version="$(Ref12WasmNativeVersion)" />
+
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <BrowserWorkloadDisabled>false</BrowserWorkloadDisabled>
+    <WorkloadDisabledWithReason></WorkloadDisabledWithReason>
+    <RunAOTCompilation Condition="'$(_R12NeedsAot)' == 'true'">true</RunAOTCompilation>
+  </PropertyGroup>
+  <Import Condition="'$(Ref12WasmNativeActive)' == 'true'" Project="$(Ref12WasmNativeRoot)net$(Ref12WasmNativeMajorFile).targets" />
+
+  <Target Name="_Ref12WasmNativeCheck" BeforeTargets="Restore;_CheckForInvalidConfigurationAndPlatform" Condition="'$(Ref12WasmNativeActive)' == 'true' and '$(_R12NeedsNative)' == 'true'">
+    <Message Importance="high" Text="Ref12.WasmNative: SDK $(NETCoreSdkVersion) (band $(Ref12WasmNativeSdkBand)); manifests: $(Ref12WasmNativeManifestOrigin); host $(Ref12WasmNativeHostRid); packs: $(R12_Packs)" />
+    <Warning Condition="'$(_R12Tested)' != 'true' and '$(Ref12WasmNativeUntested)' == 'warn'" Code="R12WASM001" Text="Ref12.WasmNative has not been tested on SDK band $(Ref12WasmNativeSdkBand) (running $(NETCoreSdkVersion)); using the net$(Ref12WasmNativeMajorFile) switches. Tested bands: $(Ref12WasmNativeTestedBands). Set Ref12WasmNativeUntested=ignore or error to change this." />
+    <Error Condition="'$(_R12Tested)' != 'true' and '$(Ref12WasmNativeUntested)' == 'error'" Code="R12WASM002" Text="Ref12.WasmNative has not been tested on SDK band $(Ref12WasmNativeSdkBand) (running $(NETCoreSdkVersion)). Tested bands: $(Ref12WasmNativeTestedBands)." />
+    <Warning Condition="'$(R12_I14)' != ''" Code="R12WASM003" Text="Ref12.WasmNative: the manifests list 14+ relink/AOT packs; extra ones are ignored." />
+    <Error Condition="'$(R12_I1)' == ''" Code="R12WASM004" Text="Ref12.WasmNative: no relink/AOT packs found for host $(Ref12WasmNativeHostRid) in the manifests ($(Ref12WasmNativeManifestOrigin))." />
+  </Target>
+</Project>

@@ -1,0 +1,4 @@
+<Project>
+  <!-- intentionally empty: the work is in build/Ref12.WasmNative.targets, hooked in by Sdk.props through CustomAfterMicrosoftCommonTargets
+       (that runs before Microsoft.NET.Sdk.WebAssembly's own targets are evaluated, which read UsingBrowserRuntimeWorkload etc.) -->
+</Project>

@@ -1,0 +1,79 @@
+name: wasm-native-sdk
+# Ref12.WasmNative: plain / relink / AOT browser-wasm publish from a CLEAN NuGet cache, no 'dotnet workload', on
+# Linux + Windows x (.NET 10 SDK, newest .NET 11 preview SDK). The weekly run catches a new preview that breaks it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
+  push:
+    paths: ['templates/wasm-native-sdk/**', '.github/workflows/wasm-native-sdk.yml']
+    tags: ['v*']
+jobs:
+  proof:
+    name: ${{ matrix.os }} / SDK ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        sdk: ['10.0', '11.0-preview']
+        include:
+          - { sdk: '10.0', name: '10.0', channel: '10.0', quality: '', tfm: net10.0 }
+          - { sdk: '11.0-preview', name: '11.0 preview', channel: '11.0', quality: preview, tfm: net11.0 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # Deliberately NO package cache: every run starts from an empty NuGet cache (that is the proof).
+      # Users who want to cache between their own CI runs: see the README ("CI cache key").
+      - name: Linux proof
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -sSL https://dot.net/v1/dotnet-install.sh -o "$RUNNER_TEMP/di.sh"
+          bash "$RUNNER_TEMP/di.sh" --channel '${{ matrix.channel }}' ${{ matrix.quality && format('--quality {0}', matrix.quality) || '' }} --install-dir "$RUNNER_TEMP/dotnet"
+          export DOTNET_ROOT="$RUNNER_TEMP/dotnet" PATH="$RUNNER_TEMP/dotnet:$PATH" DOTNET_MULTILEVEL_LOOKUP=0
+          unset MSBuildSDKsPath MSBUILD_EXE_PATH
+          dotnet --version
+          bash templates/wasm-native-sdk/scripts/proof.sh '${{ matrix.tfm }}'
+      - name: Windows proof
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./templates/wasm-native-sdk/scripts/proof.ps1 -Channel '${{ matrix.channel }}' -Quality '${{ matrix.quality }}' -Tfm '${{ matrix.tfm }}'
+      - name: Summary
+        if: always()
+        shell: bash
+        run: cat templates/wasm-native-sdk/results/*.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-${{ matrix.os }}-${{ matrix.tfm }}
+          path: templates/wasm-native-sdk/results/
+
+  # Release: on a version tag v*, after the whole matrix is green: pack with the tag's version, attach the .nupkg to a GitHub
+  # Release of THIS repo, then ask ref12labs/packages (publish.yml) to publish it. No nuget.org credentials here:
+  # nuget.org is handled by Trusted Publishing inside ref12labs/packages.
+  release:
+    needs: proof
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release with GITHUB_TOKEN
+    env:
+      PACKAGE_ID: Ref12.WasmNative
+      GH_TOKEN: ${{ github.token }}
+      DISPATCH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack (version from the tag)
+        run: bash templates/wasm-native-sdk/scripts/pack.sh "${GITHUB_REF_NAME#v}"
+      - name: GitHub Release with the nupkg
+        run: |
+          VER="${GITHUB_REF_NAME#v}"; PRE=""; case "$VER" in *-*) PRE="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" templates/wasm-native-sdk/artifacts/$PACKAGE_ID.$VER.nupkg --title "$PACKAGE_ID $VER" --generate-notes $PRE
+      - name: Ask ref12labs/packages to publish it
+        run: |
+          if [ -z "$DISPATCH_TOKEN" ]; then echo "::notice::release created, but the secret PACKAGES_DISPATCH_TOKEN (fine-grained, ref12labs/packages, Contents: read+write) is not set: not dispatched. Run: gh workflow run publish.yml -R ref12labs/packages -f repo=$GITHUB_REPOSITORY -f tag=$GITHUB_REF_NAME -f asset=$PACKAGE_ID.${GITHUB_REF_NAME#v}.nupkg"; exit 0; fi
+          GH_TOKEN="$DISPATCH_TOKEN" gh api repos/ref12labs/packages/dispatches -f event_type=publish \
+            -f "client_payload[repo]=$GITHUB_REPOSITORY" -f "client_payload[tag]=$GITHUB_REF_NAME" -f "client_payload[asset]=$PACKAGE_ID.${GITHUB_REF_NAME#v}.nupkg"

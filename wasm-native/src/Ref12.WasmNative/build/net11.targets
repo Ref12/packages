@@ -1,0 +1,10 @@
+<Project>
+  <!-- .NET SDK 11.x: what the (skipped) workload manifests would have set. Evaluated AFTER the manifests. -->
+  <PropertyGroup Condition="'$(_R12NeedsNative)' == 'true'">
+    <BrowserWorkloadDisabled>false</BrowserWorkloadDisabled>
+    <UsingBrowserRuntimeWorkload>true</UsingBrowserRuntimeWorkload>
+    <WasmNativeWorkload>true</WasmNativeWorkload>
+    <!-- BLAZORSDK1002 marker -->
+    <UsingBlazorAOTWorkloadManifest>true</UsingBlazorAOTWorkloadManifest>
+  </PropertyGroup>
+</Project>

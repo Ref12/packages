@@ -1,0 +1,124 @@
+{
+ "manifestVersions": [
+  "11.0.100-rc.1.26425.128",
+  "11.0.100-rc.1.26425.128"
+ ],
+ "workloads": {
+  "wasm-tools": {
+   "packs": [
+    "Microsoft.NET.Runtime.WebAssembly.Sdk.net11",
+    "Microsoft.NET.Sdk.WebAssembly.Pack.net11",
+    "Microsoft.NETCore.App.Runtime.Mono.net11.browser-wasm",
+    "Microsoft.NETCore.App.Runtime.net11.browser-wasm",
+    "Microsoft.NETCore.App.Runtime.AOT.Cross.net11.browser-wasm"
+   ],
+   "extends": [
+    "microsoft-net-runtime-mono-tooling",
+    "microsoft-net-sdk-emscripten"
+   ]
+  },
+  "microsoft-net-runtime-mono-tooling": {
+   "packs": [
+    "Microsoft.NET.Runtime.MonoAOTCompiler.Task.net11",
+    "Microsoft.NET.Runtime.MonoTargets.Sdk.net11"
+   ]
+  },
+  "microsoft-net-sdk-emscripten": {
+   "packs": [
+    "Microsoft.NET.Runtime.Emscripten.Node.net11",
+    "Microsoft.NET.Runtime.Emscripten.Python.net11",
+    "Microsoft.NET.Runtime.Emscripten.Cache.net11",
+    "Microsoft.NET.Runtime.Emscripten.Sdk.net11"
+   ]
+  }
+ },
+ "packs": {
+  "Microsoft.NET.Runtime.WebAssembly.Sdk.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "any": "Microsoft.NET.Runtime.WebAssembly.Sdk"
+   }
+  },
+  "Microsoft.NETCore.App.Runtime.AOT.Cross.net11.browser-wasm": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "win-x64": "Microsoft.NETCore.App.Runtime.AOT.win-x64.Cross.browser-wasm",
+    "win-arm64": "Microsoft.NETCore.App.Runtime.AOT.win-arm64.Cross.browser-wasm",
+    "linux-x64": "Microsoft.NETCore.App.Runtime.AOT.linux-x64.Cross.browser-wasm",
+    "linux-arm64": "Microsoft.NETCore.App.Runtime.AOT.linux-arm64.Cross.browser-wasm",
+    "linux-musl-x64": "Microsoft.NETCore.App.Runtime.AOT.linux-musl-x64.Cross.browser-wasm",
+    "linux-musl-arm64": "Microsoft.NETCore.App.Runtime.AOT.linux-musl-arm64.Cross.browser-wasm",
+    "osx-x64": "Microsoft.NETCore.App.Runtime.AOT.osx-x64.Cross.browser-wasm",
+    "osx-arm64": "Microsoft.NETCore.App.Runtime.AOT.osx-arm64.Cross.browser-wasm"
+   }
+  },
+  "Microsoft.NET.Runtime.MonoAOTCompiler.Task.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "any": "Microsoft.NET.Runtime.MonoAOTCompiler.Task"
+   }
+  },
+  "Microsoft.NET.Runtime.MonoTargets.Sdk.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "any": "Microsoft.NET.Runtime.MonoTargets.Sdk"
+   }
+  },
+  "Microsoft.NET.Runtime.Emscripten.Node.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "win-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.win-x64",
+    "win-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.win-arm64",
+    "linux-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.linux-x64",
+    "linux-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.linux-arm64",
+    "linux-musl-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.linux-musl-x64",
+    "linux-musl-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.linux-musl-arm64",
+    "osx-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.osx-x64",
+    "osx-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Node.osx-arm64"
+   }
+  },
+  "Microsoft.NET.Runtime.Emscripten.Python.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "win-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Python.win-x64",
+    "win-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Python.win-arm64",
+    "osx-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Python.osx-x64",
+    "osx-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Python.osx-arm64"
+   }
+  },
+  "Microsoft.NET.Runtime.Emscripten.Cache.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "win-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.win-x64",
+    "win-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.win-arm64",
+    "linux-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.linux-x64",
+    "linux-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.linux-arm64",
+    "linux-musl-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.linux-musl-x64",
+    "linux-musl-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.linux-musl-arm64",
+    "osx-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.osx-x64",
+    "osx-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Cache.osx-arm64"
+   }
+  },
+  "Microsoft.NET.Runtime.Emscripten.Sdk.net11": {
+   "kind": "Sdk",
+   "version": "11.0.0-rc.1.26425.128",
+   "alias-to": {
+    "win-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.win-x64",
+    "win-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.win-arm64",
+    "linux-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.linux-x64",
+    "linux-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.linux-arm64",
+    "linux-musl-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.linux-musl-x64",
+    "linux-musl-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.linux-musl-arm64",
+    "osx-x64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.osx-x64",
+    "osx-arm64": "Microsoft.NET.Runtime.Emscripten.6.0.2.Sdk.osx-arm64"
+   }
+  }
+ }
+}

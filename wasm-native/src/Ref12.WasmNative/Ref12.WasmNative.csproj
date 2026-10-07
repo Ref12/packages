@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- packing only: dotnet pack src/Ref12.WasmNative -p:PackageVersion=1.0.0 -o artifacts -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NuspecFile>Ref12.WasmNative.nuspec</NuspecFile>
+    <NuspecProperties>version=$(PackageVersion)</NuspecProperties>
+    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+    <PackageVersion Condition="'$(PackageVersion)' == ''">0.1.0</PackageVersion>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>$(NoWarn);NU5128;NU5127;NU5110;NU5111</NoWarn>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,6 @@
+<Project>
+  <!-- SDK majors that have a net<N>.props + net<N>.targets pair in this folder. The LAST one is the fallback for newer SDKs. -->
+  <PropertyGroup>
+    <Ref12WasmNativeNewestMajor>11</Ref12WasmNativeNewestMajor>
+  </PropertyGroup>
+</Project>

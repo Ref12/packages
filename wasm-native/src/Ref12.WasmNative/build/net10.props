@@ -1,0 +1,18 @@
+<Project>
+  <!-- Switches for .NET SDK 10.x, evaluated before the SDK's workload manifests (see Sdk.props).
+       BrowserWorkloadDisabled makes the emscripten manifest skip its "flip UsingBrowserRuntimeWorkload and import the
+       workload packs" logic (it honours RunAOTCompilation even when that is a global property). -->
+  <PropertyGroup>
+    <BrowserWorkloadDisabled>true</BrowserWorkloadDisabled>
+    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <WasmNativeWorkload>false</WasmNativeWorkload>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- SDK feature bands CI has actually run on. Others: Ref12WasmNativeUntested = warn (default) | error | ignore -->
+    <Ref12WasmNativeTestedBands>10.0.4xx</Ref12WasmNativeTestedBands>
+    <!-- which workload packs make up relink/AOT: Sdk-kind packs of the manifests whose id matches (the manifest decides host variants) -->
+    <Ref12WasmNativePackInclude>Microsoft\.NET\.Runtime\.(?:Emscripten\.[A-Za-z]+|MonoAOTCompiler\.Task|MonoTargets\.Sdk|WebAssembly\.Sdk)\.net10|Microsoft\.NETCore\.App\.Runtime\.AOT\.Cross\.net10\.browser-wasm</Ref12WasmNativePackInclude>
+    <!-- packs whose Sdk.targets must be imported too (the workload manifests import these) -->
+    <Ref12WasmNativeTargetsPacks>Emscripten\.[0-9.]+\.Cache\.|MonoTargets\.Sdk|WebAssembly\.Sdk</Ref12WasmNativeTargetsPacks>
+  </PropertyGroup>
+</Project>

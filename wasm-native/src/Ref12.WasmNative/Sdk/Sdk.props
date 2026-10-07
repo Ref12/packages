@@ -1,0 +1,34 @@
+<!--
+  Ref12.WasmNative - MSBuild project SDK (restored by the NuGet SDK resolver, like Microsoft.Build.NoTargets).
+  Use:  <Sdk Name="Ref12.WasmNative" Version="x" />  in a Microsoft.NET.Sdk.WebAssembly project, or global.json "msbuild-sdks".
+
+  Sdk.props is evaluated first, BEFORE the SDK's workload manifests and before the csproj body. Its only jobs:
+    1. pick the per-SDK-major switch file (build/net<N>.props; an unknown newer major uses the newest we have);
+    2. make the SDK's workload manifests stand down (they would otherwise demand uninstalled workload packs);
+  Everything else is in build/Ref12.WasmNative.targets, hooked in through CustomAfterMicrosoftCommonTargets (csproj properties such as RunAOTCompilation are known by then).
+  Renaming: change the package id; every property here is prefixed Ref12WasmNative.
+-->
+<Project>
+  <PropertyGroup Condition="'$(Ref12WasmNativeEnabled)' != 'false'">
+    <Ref12WasmNativeActive>true</Ref12WasmNativeActive>
+    <Ref12WasmNativeRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'build'))</Ref12WasmNativeRoot>
+    <Ref12WasmNativeSdkMajor>$(NETCoreSdkVersion.Split('.')[0])</Ref12WasmNativeSdkMajor>
+  </PropertyGroup>
+
+  <Import Condition="'$(Ref12WasmNativeActive)' == 'true'" Project="$(Ref12WasmNativeRoot)Majors.props" />
+
+  <PropertyGroup Condition="'$(Ref12WasmNativeActive)' == 'true'">
+    <Ref12WasmNativeMajorFile>$(Ref12WasmNativeSdkMajor)</Ref12WasmNativeMajorFile>
+    <!-- unknown major (older or newer than the files shipped) -> the newest file -->
+    <Ref12WasmNativeMajorFile Condition="!Exists('$(Ref12WasmNativeRoot)net$(Ref12WasmNativeSdkMajor).props')">$(Ref12WasmNativeNewestMajor)</Ref12WasmNativeMajorFile>
+    <Ref12WasmNativeMajorKnown Condition="'$(Ref12WasmNativeMajorFile)' == '$(Ref12WasmNativeSdkMajor)'">true</Ref12WasmNativeMajorKnown>
+    <Ref12WasmNativeMajorKnown Condition="'$(Ref12WasmNativeMajorKnown)' == ''">false</Ref12WasmNativeMajorKnown>
+  </PropertyGroup>
+  <Import Condition="'$(Ref12WasmNativeActive)' == 'true'" Project="$(Ref12WasmNativeRoot)net$(Ref12WasmNativeMajorFile).props" />
+
+
+  <!-- after Microsoft.Common.targets (so after the SDK's workload manifests and the csproj body), before the WebAssembly SDK's targets -->
+  <PropertyGroup Condition="'$(Ref12WasmNativeActive)' == 'true'">
+    <CustomAfterMicrosoftCommonTargets>$(CustomAfterMicrosoftCommonTargets);$(Ref12WasmNativeRoot)Ref12.WasmNative.targets</CustomAfterMicrosoftCommonTargets>
+  </PropertyGroup>
+</Project>
