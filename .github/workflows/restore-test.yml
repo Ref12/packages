@@ -15,7 +15,7 @@ jobs:
         run: |
           mkdir c && cd c
           cat > nuget.config <<'EOF'
-          <configuration><packageSources><clear/><add key="rel" value="https://github.com/ref12labs/packages/releases/download/feed/index.json" protocolVersion="3"/></packageSources></configuration>
+          <configuration><packageSources><clear/><add key="rel" value="https://github.com/Ref12/packages/releases/download/feed/index.json" protocolVersion="3"/></packageSources></configuration>
           EOF
           cat > c.csproj <<EOF
           <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Ref12.FeedProbe" Version="${{ matrix.ver }}"/></ItemGroup></Project>

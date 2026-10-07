@@ -9,7 +9,7 @@ The workload is only a set of NuGet packs plus a manifest that imports them as M
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
-  <Sdk Name="Ref12.WasmNative" Version="0.1.0" />
+  <Sdk Name="Ref12.WasmNative" Version="0.1.0-preview.1" />
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
@@ -22,7 +22,7 @@ The workload is only a set of NuGet packs plus a manifest that imports them as M
 or leave the `<Sdk>` element out and put the version in `global.json`:
 
 ```json
-{ "msbuild-sdks": { "Ref12.WasmNative": "0.1.0" } }
+{ "msbuild-sdks": { "Ref12.WasmNative": "0.1.0-preview.1" } }
 ```
 (then still write `<Sdk Name="Ref12.WasmNative" />` in the csproj). Nothing happens unless a native feature is requested: a plain build downloads nothing extra.
 
@@ -84,14 +84,14 @@ where `SDK_VERSION` is the output of `dotnet --version`: the pack versions follo
 
 ## Get it
 
-Not on nuget.org yet. Add the ref12labs feed, mapped to this id only (see https://github.com/ref12labs/packages#consume):
+Not on nuget.org yet. Add the Ref12 feed, mapped to this id only (see https://github.com/Ref12/packages#consume):
 
 ```xml
 <configuration>
   <packageSources>
     <clear />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="ref12" value="https://github.com/ref12labs/packages/releases/download/feed/index.json" protocolVersion="3" />
+    <add key="ref12" value="https://github.com/Ref12/packages/releases/download/feed/index.json" protocolVersion="3" />
   </packageSources>
   <packageSourceMapping>
     <packageSource key="ref12"><package pattern="Ref12.WasmNative" /></packageSource>
@@ -104,4 +104,4 @@ As an MSBuild SDK use the `<Sdk Name=... Version=.../>` element or `global.json`
 
 ## Source and licence
 
-https://github.com/ref12labs/packages/tree/main/wasm-native. MIT.
+https://github.com/Ref12/packages/tree/main/wasm-native. MIT.

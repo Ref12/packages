@@ -24,21 +24,21 @@ public class AllowlistTests
     public void Real_file_allows_probe_from_this_repo_only()
     {
         var a = Repo();
-        Assert.True(a.Check("Ref12.FeedProbe", "ref12labs/packages").Ok);
+        Assert.True(a.Check("Ref12.FeedProbe", "Ref12/packages").Ok);
         Assert.True(a.Check("ref12.feedprobe", "REF12LABS/Packages").Ok);   // case-insensitive
         var bad = a.Check("Ref12.FeedProbe", "evil/fork");
         Assert.False(bad.Ok);
-        Assert.Contains("ref12labs/packages", bad.Message);
+        Assert.Contains("Ref12/packages", bad.Message);
     }
 
     [Fact]
     public void Real_file_has_exact_wasmnative_entry()
     {
         var a = Repo();
-        Assert.True(a.Check("Ref12.WasmNative", "ref12labs/packages").Ok);
-        Assert.False(a.Check("Ref12.WasmNative", "ref12labs/dotnet-wasm-lab").Ok);
-        Assert.False(a.Check("Ref12.WasmNativeX", "ref12labs/packages").Ok);
-        Assert.False(a.Check("Ref12.Other", "ref12labs/packages").Ok);
+        Assert.True(a.Check("Ref12.WasmNative", "Ref12/packages").Ok);
+        Assert.False(a.Check("Ref12.WasmNative", "Ref12/dotnet-wasm-lab").Ok);
+        Assert.False(a.Check("Ref12.WasmNativeX", "Ref12/packages").Ok);
+        Assert.False(a.Check("Ref12.Other", "Ref12/packages").Ok);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ public sealed class VersionEntry
 /// <summary>Builds NuGet v3 registration indexes (inline items) from per-version directories.</summary>
 public static class IndexBuilder
 {
-    public const string DefaultBaseUrl = "https://github.com/ref12labs/packages/releases/download/";
+    public const string DefaultBaseUrl = "https://github.com/Ref12/packages/releases/download/";
     public const int PageSize = 64;
     private const string Epoch = "1970-01-01T00:00:00Z";
     private const string UnlistedDate = "1900-01-01T00:00:00Z";

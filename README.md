@@ -1,14 +1,14 @@
 # packages
 
-Package publishing for ref12labs: GitHub Releases used as an anonymous NuGet v3 feed (registration index only).
+Package publishing for Ref12: GitHub Releases used as an anonymous NuGet v3 feed (registration index only).
 
-Source URL: `https://github.com/ref12labs/packages/releases/download/feed/index.json`
+Source URL: `https://github.com/Ref12/packages/releases/download/feed/index.json`
 
 ## Layout
 
 | Release | Holds |
 |---|---|
-| `feed` | the service index (`index.json`), with `RegistrationsBaseUrl/3.6.0` = `https://github.com/ref12labs/packages/releases/download/` |
+| `feed` | the service index (`index.json`), with `RegistrationsBaseUrl/3.6.0` = `https://github.com/Ref12/packages/releases/download/` |
 | `<id>` (lowercase id) | `index.json`: the generated registration index of that package, inline items |
 | `<id>-<version>` | `<id>.<version>.nupkg`, `<id>.<version>.nuspec`, and an `unlisted` marker when unlisted |
 
@@ -23,7 +23,7 @@ No slash tags (git cannot have tag `x` and `x/1.0`). Ids and versions are lowerc
   <packageSources>
     <clear />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="ref12" value="https://github.com/ref12labs/packages/releases/download/feed/index.json" protocolVersion="3" />
+    <add key="ref12" value="https://github.com/Ref12/packages/releases/download/feed/index.json" protocolVersion="3" />
   </packageSources>
   <packageSourceMapping>
     <packageSource key="ref12">
@@ -45,8 +45,8 @@ A package may be published only if its id and source repo are in `packages.json`
 
 ```json
 { "packages": [
-  { "id": "Ref12.FeedProbe", "repos": ["ref12labs/packages"], "nugetOrg": false },
-  { "id": "Ref12.WasmNative", "repos": ["ref12labs/packages"], "nugetOrg": false }
+  { "id": "Ref12.FeedProbe", "repos": ["Ref12/packages"], "nugetOrg": false },
+  { "id": "Ref12.WasmNative", "repos": ["Ref12/packages"], "nugetOrg": false }
 ] }
 ```
 
@@ -55,22 +55,22 @@ An exact `id` entry wins over prefixes; prefixes are plain case-insensitive "sta
 ### Release source: a .nupkg attached to a release of a source repo
 
 ```sh
-gh workflow run publish.yml -R ref12labs/packages \
-  -f repo=ref12labs/some-lib -f tag=v1.2.3 -f asset=Some.Lib.1.2.3.nupkg
+gh workflow run publish.yml -R Ref12/packages \
+  -f repo=Ref12/some-lib -f tag=v1.2.3 -f asset=Some.Lib.1.2.3.nupkg
 ```
 
 ### Build source: build it here with `dotnet pack`
 
 ```sh
-gh workflow run publish.yml -R ref12labs/packages \
-  -f repo=ref12labs/packages -f ref=main -f project=probe/Ref12.FeedProbe
+gh workflow run publish.yml -R Ref12/packages \
+  -f repo=Ref12/packages -f ref=main -f project=probe/Ref12.FeedProbe
 ```
 
 Add `-f nuget_org=true` to also push to nuget.org (see below).
 
 ### From another repo's release workflow
 
-Needs a secret `PACKAGES_DISPATCH_TOKEN` in that repo: a fine-grained token limited to `ref12labs/packages` with *Contents: read and write* (required by the dispatch API). `repository_dispatch` only runs the workflow on the default branch.
+Needs a secret `PACKAGES_DISPATCH_TOKEN` in that repo: a fine-grained token limited to `Ref12/packages` with *Contents: read and write* (required by the dispatch API). `repository_dispatch` only runs the workflow on the default branch.
 
 ```yaml
 on:
@@ -81,11 +81,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ...your steps that build the .nupkg and attach it to the release as Some.Lib.${{ github.event.release.tag_name }}.nupkg...
-      - name: Ask ref12labs/packages to publish it
+      - name: Ask Ref12/packages to publish it
         env:
           GH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
         run: |
-          gh api repos/ref12labs/packages/dispatches \
+          gh api repos/Ref12/packages/dispatches \
             -f event_type=publish \
             -f 'client_payload[repo]=${{ github.repository }}' \
             -f 'client_payload[tag]=${{ github.event.release.tag_name }}' \
@@ -106,17 +106,17 @@ jobs:
 
 ## Maintain
 
-- **Unlist** (hide from search, keep downloadable): `gh workflow run unlist.yml -R ref12labs/packages -f id=Ref12.FeedProbe -f version=0.0.2`. Add `-f relist=true` to undo. This adds/removes the `unlisted` asset and regenerates the index. NuGet still restores an exact unlisted version.
-- **Reindex** (repair): `gh workflow run reindex.yml -R ref12labs/packages -f id=Ref12.FeedProbe`; without `id` it rebuilds every package index and the service index. Releases made before nuspec assets existed are read from their nupkg.
+- **Unlist** (hide from search, keep downloadable): `gh workflow run unlist.yml -R Ref12/packages -f id=Ref12.FeedProbe -f version=0.0.2`. Add `-f relist=true` to undo. This adds/removes the `unlisted` asset and regenerates the index. NuGet still restores an exact unlisted version.
+- **Reindex** (repair): `gh workflow run reindex.yml -R Ref12/packages -f id=Ref12.FeedProbe`; without `id` it rebuilds every package index and the service index. Releases made before nuspec assets existed are read from their nupkg.
 
 ## Enable nuget.org (not active until you do this)
 
 1. On nuget.org: sign in as the owner account, then *Trusted Publishing* (https://www.nuget.org/account/trustedpublishing) -> add a policy:
-   - Repository Owner: `ref12labs`
+   - Repository Owner: `Ref12`
    - Repository: `packages`
    - Workflow File: `publish.yml`
    - Environment: `nuget-org`
-2. In GitHub (ref12labs/packages) -> Settings -> Environments: create `nuget-org` (optionally with required reviewers).
+2. In GitHub (Ref12/packages) -> Settings -> Environments: create `nuget-org` (optionally with required reviewers).
 3. Set the variable `NUGET_USER` to your nuget.org **profile name** (not email): Settings -> Secrets and variables -> Actions -> Variables (repository, or on the `nuget-org` environment).
 4. Set `"nugetOrg": true` on the package's entry in `packages.json`.
 5. Publish with `-f nuget_org=true`.

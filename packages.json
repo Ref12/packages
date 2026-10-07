@@ -3,14 +3,14 @@
     {
       "id": "Ref12.FeedProbe",
       "repos": [
-        "ref12labs/packages"
+        "Ref12/packages"
       ],
       "nugetOrg": false
     },
     {
       "id": "Ref12.WasmNative",
       "repos": [
-        "ref12labs/packages"
+        "Ref12/packages"
       ],
       "nugetOrg": false
     }

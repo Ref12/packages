@@ -17,5 +17,5 @@ pwsh wasm-native/scripts/proof.ps1 -Channel 11.0 -Quality preview -Tfm net11.0
 CI: `.github/workflows/wasm-native.yml`. Publish:
 
 ```
-gh workflow run publish.yml -R ref12labs/packages -f repo=ref12labs/packages -f ref=main -f project=wasm-native/Ref12.WasmNative
+gh workflow run publish.yml -R Ref12/packages -f repo=Ref12/packages -f ref=main -f project=wasm-native/Ref12.WasmNative
 ```
