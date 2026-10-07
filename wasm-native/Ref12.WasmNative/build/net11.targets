@@ -4,6 +4,9 @@
     <BrowserWorkloadDisabled>false</BrowserWorkloadDisabled>
     <UsingBrowserRuntimeWorkload>true</UsingBrowserRuntimeWorkload>
     <WasmNativeWorkload>true</WasmNativeWorkload>
+    <!-- the manifest derives this from WasmNativeWorkload at evaluation time (false while we stand down); its
+         _CheckBrowserWorkloadNeededButNotAvailable / _SuggestWasmWorkloadForBlazor targets test it at run time -->
+    <WasmNativeWorkloadAvailable>true</WasmNativeWorkloadAvailable>
     <!-- BLAZORSDK1002 marker -->
     <UsingBlazorAOTWorkloadManifest>true</UsingBlazorAOTWorkloadManifest>
   </PropertyGroup>
