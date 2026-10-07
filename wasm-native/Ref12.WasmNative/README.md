@@ -9,7 +9,7 @@ The workload is only a set of NuGet packs plus a manifest that imports them as M
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
-  <Sdk Name="Ref12.WasmNative" Version="0.1.0-preview.1" />
+  <Sdk Name="Ref12.WasmNative" Version="0.1.0-preview.2" />
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
@@ -22,7 +22,7 @@ The workload is only a set of NuGet packs plus a manifest that imports them as M
 or leave the `<Sdk>` element out and put the version in `global.json`:
 
 ```json
-{ "msbuild-sdks": { "Ref12.WasmNative": "0.1.0-preview.1" } }
+{ "msbuild-sdks": { "Ref12.WasmNative": "0.1.0-preview.2" } }
 ```
 (then still write `<Sdk Name="Ref12.WasmNative" />` in the csproj). Nothing happens unless a native feature is requested: a plain build downloads nothing extra.
 

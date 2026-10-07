@@ -7,6 +7,10 @@
     <!-- the manifest derives this from WasmNativeWorkload at evaluation time (false while we stand down); its
          _CheckBrowserWorkloadNeededButNotAvailable / _SuggestWasmWorkloadForBlazor targets test it at run time -->
     <WasmNativeWorkloadAvailable>true</WasmNativeWorkloadAvailable>
+    <!-- BrowserWasmApp.props sets this from WasmNativeWorkload while the packs' Sdk.props are imported, i.e. while that is still false:
+         without it _WasmSelectRuntimeComponentsForLinking is skipped and the debugger/hot_reload/marshal-ilgen components are linked in
+         full instead of as stubs (+150 KB wasm vs the workload build) -->
+    <WasmIsWorkloadAvailable>true</WasmIsWorkloadAvailable>
     <!-- BLAZORSDK1002 marker -->
     <UsingBlazorAOTWorkloadManifest>true</UsingBlazorAOTWorkloadManifest>
   </PropertyGroup>

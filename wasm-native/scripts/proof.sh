@@ -23,10 +23,17 @@ echo "{\"msbuild-sdks\":{\"Ref12.WasmNative\":\"$VER\"}}" > global.json
 cp "$ROOT/smoke/smoke.mjs" . ; rm -rf "$NUGET_PACKAGES"
 log "NUGET_PACKAGES=$NUGET_PACKAGES (clean)"
 FAIL=0
-for v in "plain:" "relink:-p:WasmBuildNative=true" "aot:-p:Ref12WasmNativeAot=true"; do
+for v in "plain:" "relink:-p:WasmBuildNative=true" "native:-p:WasmBuildNative=true -p:SmokeNativePkg=true" "aot:-p:Ref12WasmNativeAot=true"; do
   n=${v%%:*}; f=${v#*:}; rm -rf app/obj app/bin
   s=$(date +%s.%N)
   if ! dotnet publish app -c Release -p:SmokeTfm=$TFM -o out/$n $f >build-$n.log 2>&1; then log "- $n: PUBLISH FAILED"; grep -E "error|warning R12" build-$n.log | sort -u | head -15 | tee -a "$L"; FAIL=1; cp build-$n.log "$RES"/; continue; fi
+  if [ "$n" != plain ]; then
+    # the workload-only warnings must not appear, and the toolchain must come from OUR package (the NuGet cache)
+    if grep -E "won't be linked in|Publishing without optimizations" build-$n.log; then log "- $n: WORKLOAD WARNING PRESENT"; FAIL=1; fi
+    grep -q "Ref12.WasmNative: SDK" build-$n.log || { log "- $n: no 'Ref12.WasmNative:' line in the log"; FAIL=1; }
+    grep -i "Compiling native assets with" build-$n.log | grep -qiF "$NUGET_PACKAGES" || { log "- $n: emcc is not from the NuGet cache"; FAIL=1; }
+    grep -q "Linking with emcc" build-$n.log || { log "- $n: no emcc link step"; FAIL=1; }
+  fi
   e=$(date +%s.%N); w=$(ls out/$n/wwwroot/_framework/dotnet.native.*.wasm | head -1)
   log "- $n: publish $(awk "BEGIN{printf \"%.1f\", $e-$s}") s, dotnet.native.wasm $(stat -c %s "$w" 2>/dev/null || stat -f %z "$w") bytes"
   grep -E "warning R12|Ref12.WasmNative:" build-$n.log | sort -u | sed 's/^ */  /' | tee -a "$L" || true
@@ -36,7 +43,7 @@ log "NuGet cache after: $(du -sh "$NUGET_PACKAGES" | cut -f1); packages: $(ls "$
 log '```'; dotnet workload list 2>&1 | tee -a "$L"; log '```'; chk
 if [ "${SMOKE:-1}" = 1 ]; then
   [ -d "$ROOT/smoke/node_modules" ] || (cd "$ROOT/smoke" && npm i --no-save --no-package-lock --no-audit --no-fund playwright-core@1.50.0 >/dev/null 2>&1)
-  for n in plain relink aot; do [ -d out/$n ] || continue
+  for n in plain relink native aot; do [ -d out/$n ] || continue
     if (cd "$ROOT/smoke" && OUT="$W/out/$n" BROWSER_CHANNEL=${BROWSER_CHANNEL:-chrome} node smoke.mjs) | tee -a "$L" | tail -1 | grep -q "SMOKE OK"; then log "- smoke $n: OK"; else log "- smoke $n: FAIL"; FAIL=1; fi
   done
 fi
