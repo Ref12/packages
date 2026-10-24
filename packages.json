@@ -13,6 +13,27 @@
         "Ref12/packages"
       ],
       "nugetOrg": false
+    },
+    {
+      "id": "Microsoft.NETCore.App.Runtime.Mono.multithread.browser-wasm",
+      "repos": [
+        "Ref12/packages"
+      ],
+      "nugetOrg": false
+    },
+    {
+      "id": "Microsoft.NET.WebAssembly.Threading",
+      "repos": [
+        "Ref12/packages"
+      ],
+      "nugetOrg": false
+    },
+    {
+      "id": "Microsoft.NET.Sdk.WebAssembly.Pack",
+      "repos": [
+        "Ref12/packages"
+      ],
+      "nugetOrg": false
     }
   ]
 }
